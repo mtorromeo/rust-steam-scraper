@@ -1,0 +1,11 @@
+[package]
+name = "steamscrape"
+version = "0.1.0"
+authors = ["Massimiliano Torromeo <massimiliano.torromeo@gmail.com>"]
+
+[dependencies]
+clippy = { version = "*", optional = true }
+reqwest = "0.8.4"
+select = "0.4.2"
+scraper = "0.4.0"
+url = "1.6.0"
