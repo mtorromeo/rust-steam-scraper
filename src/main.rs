@@ -1,5 +1,5 @@
-#![cfg_attr(feature="clippy", feature(plugin))]
-#![cfg_attr(feature="clippy", plugin(clippy))]
+#![cfg_attr(feature = "clippy", feature(plugin))]
+#![cfg_attr(feature = "clippy", plugin(clippy))]
 
 extern crate reqwest;
 extern crate scraper;
@@ -57,7 +57,8 @@ impl SteamScraper for scraper::Html {
 }
 
 fn main() {
-    let url = Url::parse("http://store.steampowered.com/app/678950/DRAGON_BALL_FighterZ/").expect("Invalid url");
+    let url = Url::parse("http://store.steampowered.com/app/678950/DRAGON_BALL_FighterZ/")
+        .expect("Invalid url");
 
     let cache_id = steamurl_appid(&url).expect("Invalid steam app url");
     let cache_path = Path::new("cache").join(cache_id);
@@ -95,7 +96,7 @@ fn steamurl_appid(url: &Url) -> Option<&str> {
             }
             parts.next()
         }
-        None => None
+        None => None,
     }
 }
 
@@ -131,9 +132,9 @@ fn url_fetch_body<S: AsRef<str>>(url: S, cache_path: &Path) -> Result<String, St
     Ok(body)
 }
 
-fn wget<S: AsRef<str>> (url: S, filename: &Path, force: bool) -> Result<(), String> {
+fn wget<S: AsRef<str>>(url: S, filename: &Path, force: bool) -> Result<(), String> {
     if !force && filename.exists() {
-        return Ok(())
+        return Ok(());
     }
 
     let url = url.as_ref();
@@ -184,7 +185,10 @@ fn file_put_contents(filename: &Path, contents: &[u8]) -> io::Result<()> {
     File::create(filename)?.write_all(contents)
 }
 
-fn file_put_bytes<R: ?Sized>(filename: &Path, bytes: &mut R) -> io::Result<()> where R: io::Read {
+fn file_put_bytes<R: ?Sized>(filename: &Path, bytes: &mut R) -> io::Result<()>
+where
+    R: io::Read,
+{
     if let Some(parent) = filename.parent() {
         fs::create_dir_all(parent)?;
     }
