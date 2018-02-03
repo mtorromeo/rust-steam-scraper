@@ -16,7 +16,9 @@ pub struct ApiError {
 
 impl ApiError {
     fn new<S: Into<String>>(reason: S) -> Self {
-        Self { reason: reason.into() }
+        Self {
+            reason: reason.into(),
+        }
     }
 }
 
@@ -31,15 +33,11 @@ impl From<reqwest::Error> for ApiError {
 
 impl Api {
     pub fn new<S: Into<String>>(key: S) -> Api {
-        Api {
-            key: key.into(),
-        }
+        Api { key: key.into() }
     }
 
     pub fn from_env() -> result::Result<Api, env::VarError> {
-        Ok(Api::new(
-            env::var("STEAM_API_KEY")?,
-        ))
+        Ok(Api::new(env::var("STEAM_API_KEY")?))
     }
 
     fn call<S: AsRef<str>>(&self, path: S, options: &mut HashMap<String, String>) -> Result<Value> {

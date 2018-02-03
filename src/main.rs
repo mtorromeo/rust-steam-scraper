@@ -1,12 +1,13 @@
 #![cfg_attr(feature = "clippy", feature(plugin))]
 #![cfg_attr(feature = "clippy", plugin(clippy))]
 
+extern crate clap;
+extern crate dotenv;
 extern crate reqwest;
 extern crate scraper;
 extern crate select;
-extern crate url;
-extern crate dotenv;
 extern crate serde_json;
+extern crate url;
 
 use std::string::String;
 use std::collections::HashMap;
@@ -17,6 +18,7 @@ use std::fs::File;
 use std::path::Path;
 use scraper::{Html, Selector};
 use url::Url;
+use clap::{App, Arg};
 
 mod steamapi;
 
@@ -62,6 +64,31 @@ impl SteamScraper for scraper::Html {
 
 fn main() {
     dotenv::dotenv().ok();
+
+    let args = App::new("SteamScrape")
+        .version("1.0")
+        .author("Massimiliano Torromeo <massimiliano.torromeo@gmail.com>")
+        .about("Steam store web scraper")
+        .arg(
+            Arg::with_name("user")
+                .short("u")
+                .long("user")
+                .value_name("USER")
+                .help("Retieves the list of games from this user's library")
+                .takes_value(true),
+        )
+        .get_matches();
+
+    if let Some(user) = args.value_of("user") {
+        let api = steamapi::Api::from_env().expect(
+            "No steam api key provinded. Set one in the STEAM_API_KEY environment variable.",
+        );
+        if let Ok(steamid) = api.resolve_vanity_url(user) {
+            println!("Resolved vanity name to: {}", steamid);
+        } else {
+            println!("Couldn't find steamid for {}", user);
+        }
+    }
 
     let url = Url::parse("http://store.steampowered.com/app/678950/DRAGON_BALL_FighterZ/")
         .expect("Invalid url");
