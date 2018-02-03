@@ -5,6 +5,8 @@ extern crate reqwest;
 extern crate scraper;
 extern crate select;
 extern crate url;
+extern crate dotenv;
+extern crate serde_json;
 
 use std::string::String;
 use std::collections::HashMap;
@@ -15,6 +17,8 @@ use std::fs::File;
 use std::path::Path;
 use scraper::{Html, Selector};
 use url::Url;
+
+mod steamapi;
 
 trait SteamScraper {
     fn props(&self) -> HashMap<String, String>;
@@ -57,6 +61,8 @@ impl SteamScraper for scraper::Html {
 }
 
 fn main() {
+    dotenv::dotenv().ok();
+
     let url = Url::parse("http://store.steampowered.com/app/678950/DRAGON_BALL_FighterZ/")
         .expect("Invalid url");
 
@@ -80,12 +86,10 @@ fn main() {
     }
 
     for imageurl in doc.screenshots() {
-        let imageurl = imageurl.replace(".116x65.jpg", ".600x338.jpg");
+        let imageurl = imageurl.replace(".116x65.jpg", ".jpg");
         wget_to_dir(imageurl, &cache_path).unwrap();
     }
 }
-
-// http://cdn.edgecast.steamstatic.com/steam/apps/678950/ss_0867700a848facc3b4ec1b19f5b0e50a03f4bc04.600x338.jpg?t=1517353014
 
 fn steamurl_appid(url: &Url) -> Option<&str> {
     match url.path_segments() {
