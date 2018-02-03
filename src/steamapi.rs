@@ -63,4 +63,25 @@ impl Api {
             _ => Err(ApiError::new("Steam API returned an invalid response")),
         }
     }
+
+    pub fn get_owned_games<S: Into<String>>(&self, steamid: S) -> Result<Vec<u64>> {
+        let mut options = HashMap::new();
+        options.insert(String::from("steamid"), steamid.into());
+        options.insert(String::from("format"), String::from("json"));
+        let response = self.call("IPlayerService/GetOwnedGames/v0001/", &mut options)?;
+        let response = response["response"]["games"].clone();
+        match response {
+            Value::Array(games) => {
+                let games = games
+                    .iter()
+                    .filter_map(|game| match game["appid"] {
+                        Value::Number(ref num) => num.as_u64(),
+                        _ => None,
+                    })
+                    .collect::<Vec<_>>();
+                Ok(games)
+            }
+            _ => Err(ApiError::new("Steam API returned an invalid response")),
+        }
+    }
 }

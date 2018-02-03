@@ -81,10 +81,12 @@ fn main() {
 
     if let Some(user) = args.value_of("user") {
         let api = steamapi::Api::from_env().expect(
-            "No steam api key provinded. Set one in the STEAM_API_KEY environment variable.",
+            "No steam api key provided. Set one in the STEAM_API_KEY environment variable.",
         );
         if let Ok(steamid) = api.resolve_vanity_url(user) {
             println!("Resolved vanity name to: {}", steamid);
+            let games = api.get_owned_games(steamid);
+            println!("{:?}", games);
         } else {
             println!("Couldn't find steamid for {}", user);
         }
