@@ -15,7 +15,6 @@ use clap::{App, Arg, ArgGroup};
 mod steam;
 mod utils;
 
-
 fn main() {
     dotenv::dotenv().ok();
 
@@ -31,7 +30,8 @@ fn main() {
                 .help("Scrape this user's whole library")
                 .takes_value(true)
                 .empty_values(false),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("gameids")
                 .short("g")
                 .long("gameid")
@@ -40,10 +40,11 @@ fn main() {
                 .multiple(true)
                 .takes_value(true)
                 .empty_values(false),
-        ).group(
+        )
+        .group(
             ArgGroup::with_name("games")
                 .args(&["user", "gameids"])
-                .required(true)
+                .required(true),
         )
         .get_matches();
 
@@ -52,7 +53,8 @@ fn main() {
             let api = steam::Api::from_env().expect(
                 "No steam api key provided. Set one in the STEAM_API_KEY environment variable.",
             );
-            let steamid = api.resolve_vanity_url(user).expect(&format!("Couldn't find steamid for {}", user));
+            let steamid = api.resolve_vanity_url(user)
+                .expect(&format!("Couldn't find steamid for {}", user));
             println!("Resolved vanity name to: {}", steamid);
             match api.get_owned_games(steamid) {
                 Ok(games) => Some(games),

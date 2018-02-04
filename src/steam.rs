@@ -1,7 +1,7 @@
 use std::env;
 use std::collections::HashMap;
 use reqwest;
-use reqwest::header::{Headers, Cookie};
+use reqwest::header::{Cookie, Headers};
 use std::result;
 use std::str::FromStr;
 use std::error::Error;
