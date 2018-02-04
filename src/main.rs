@@ -1,8 +1,13 @@
 #![cfg_attr(feature = "clippy", feature(plugin))]
 #![cfg_attr(feature = "clippy", plugin(clippy))]
 
+#[macro_use]
+extern crate log;
+extern crate pretty_env_logger;
+
 #[macro_use(values_t)]
 extern crate clap;
+
 extern crate dotenv;
 extern crate reqwest;
 extern crate scraper;
@@ -17,6 +22,7 @@ mod utils;
 
 fn main() {
     dotenv::dotenv().ok();
+    pretty_env_logger::init();
 
     let args = App::new("SteamScrape")
         .version("1.0")
@@ -55,7 +61,7 @@ fn main() {
             );
             let steamid = api.resolve_vanity_url(user)
                 .expect(&format!("Couldn't find steamid for {}", user));
-            println!("Resolved vanity name to: {}", steamid);
+            info!("Resolved vanity name to: {}", steamid);
             match api.get_owned_games(steamid) {
                 Ok(games) => Some(games),
                 Err(_) => None,
@@ -68,7 +74,7 @@ fn main() {
     } {
         for game in games {
             if let Ok(page) = steam::Page::scrape(game) {
-                println!("{:?}", page);
+                debug!("{:?}", page);
                 page.fetch_images();
             }
         }

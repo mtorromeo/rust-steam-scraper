@@ -12,7 +12,7 @@ pub fn wget<S: AsRef<str>>(url: S, filename: &Path, force: bool) -> Result<(), S
     }
 
     let url = url.as_ref();
-    println!("Fetching URL {}", url);
+    info!("Fetching URL {}", url);
 
     let mut resp = match reqwest::get(url) {
         Ok(resp) => resp,
@@ -22,7 +22,7 @@ pub fn wget<S: AsRef<str>>(url: S, filename: &Path, force: bool) -> Result<(), S
         return Err(String::from("Failed to retrieve URL"));
     }
     if let Err(why) = file_put_bytes(filename, &mut resp) {
-        println!("Couldn't write file to disk: {}", why);
+        error!("Couldn't write file to disk: {}", why);
     }
 
     Ok(())

@@ -32,7 +32,7 @@ pub type Result<T> = result::Result<T, ApiError>;
 
 impl From<reqwest::Error> for ApiError {
     fn from(error: reqwest::Error) -> Self {
-        println!("{:?}", error);
+        error!("{:?}", error);
         ApiError::new(error.description())
     }
 }
@@ -157,13 +157,13 @@ impl Page {
     fn fetch<S: AsRef<str>>(url: S, cache_path: &Path) -> Result<String> {
         if cache_path.to_str().unwrap_or("") != "" {
             if let Ok(body) = super::utils::file_get_string_contents(cache_path) {
-                println!("Found page in cache");
+                debug!("Found page in cache");
                 return Ok(body);
             }
         }
 
         let url = url.as_ref();
-        println!("Fetching url {}", url);
+        info!("Fetching url {}", url);
 
         let mut headers = Headers::new();
         let mut cookie = Cookie::new();
@@ -181,7 +181,7 @@ impl Page {
 
         if cache_path.to_str().unwrap_or("") != "" {
             if let Err(why) = super::utils::file_put_contents(cache_path, body.as_bytes()) {
-                println!("Couldn't save page body to offline cache: {}", why);
+                error!("Couldn't save page body to offline cache: {}", why);
             }
         }
 
@@ -191,14 +191,14 @@ impl Page {
     pub fn fetch_images(&self) {
         if let Some(imageurl) = self.props.get("image") {
             if let Err(error) = super::utils::wget_to_dir(imageurl, &self.cache_path) {
-                println!("{:?}", error);
+                warn!("{:?}", error);
             }
         }
 
         for imageurl in &self.screenshots {
             let imageurl = imageurl.replace(".116x65.jpg", ".jpg");
             if let Err(error) = super::utils::wget_to_dir(imageurl, &self.cache_path) {
-                println!("{:?}", error);
+                warn!("{:?}", error);
             }
         }
     }
