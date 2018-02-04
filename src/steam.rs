@@ -189,12 +189,16 @@ impl Page {
 
     pub fn fetch_images(&self) {
         if let Some(imageurl) = self.props.get("image") {
-            super::utils::wget_to_dir(imageurl, &self.cache_path).unwrap();
+            if let Err(error) = super::utils::wget_to_dir(imageurl, &self.cache_path) {
+                println!("{:?}", error);
+            }
         }
 
         for imageurl in &self.screenshots {
             let imageurl = imageurl.replace(".116x65.jpg", ".jpg");
-            super::utils::wget_to_dir(imageurl, &self.cache_path).unwrap();
+            if let Err(error) = super::utils::wget_to_dir(imageurl, &self.cache_path) {
+                println!("{:?}", error);
+            }
         }
     }
 }
