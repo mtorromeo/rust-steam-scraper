@@ -5,8 +5,9 @@ use std::fs::File;
 use std::path::Path;
 use url::Url;
 use reqwest;
+use failure::Error;
 
-pub fn wget<S: AsRef<str>>(url: S, filename: &Path, force: bool) -> Result<(), String> {
+pub fn wget<S: AsRef<str>>(url: S, filename: &Path, force: bool) -> Result<(), Error> {
     if !force && filename.exists() {
         return Ok(());
     }
@@ -14,13 +15,9 @@ pub fn wget<S: AsRef<str>>(url: S, filename: &Path, force: bool) -> Result<(), S
     let url = url.as_ref();
     info!("Fetching URL {}", url);
 
-    let mut resp = match reqwest::get(url) {
-        Ok(resp) => resp,
-        Err(e) => return Err(e.to_string()),
-    };
-    if !resp.status().is_success() {
-        return Err(String::from("Failed to retrieve URL"));
-    }
+    let mut resp = reqwest::get(url)?;
+    ensure!(resp.status().is_success(), "Failed to retrieve URL");
+
     if let Err(why) = file_put_bytes(filename, &mut resp) {
         error!("Couldn't write file to disk: {}", why);
     }
@@ -28,12 +25,9 @@ pub fn wget<S: AsRef<str>>(url: S, filename: &Path, force: bool) -> Result<(), S
     Ok(())
 }
 
-pub fn wget_to_dir<S: AsRef<str>>(url: S, dir: &Path) -> Result<(), String> {
+pub fn wget_to_dir<S: AsRef<str>>(url: S, dir: &Path) -> Result<(), Error> {
     let url_s = url.as_ref();
-    let url = match Url::parse(url_s) {
-        Ok(url) => url,
-        Err(_) => return Err(String::from("Invalid URL")),
-    };
+    let url = Url::parse(url_s)?;
 
     if let Some(segments) = url.path_segments() {
         if let Some(name) = segments.last() {
@@ -42,7 +36,7 @@ pub fn wget_to_dir<S: AsRef<str>>(url: S, dir: &Path) -> Result<(), String> {
         }
     }
 
-    Err(String::from("Invalid URL"))
+    format_err!("Invalid URL")
 }
 
 pub fn file_get_string_contents(filename: &Path) -> io::Result<String> {
@@ -66,8 +60,6 @@ where
     if let Some(parent) = filename.parent() {
         fs::create_dir_all(parent)?;
     }
-    match io::copy(bytes, &mut File::create(filename)?) {
-        Ok(_) => Ok(()),
-        Err(e) => Err(e),
-    }
+    io::copy(bytes, &mut File::create(filename)?)?;
+    Ok(())
 }

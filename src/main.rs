@@ -2,6 +2,9 @@
 #![cfg_attr(feature = "clippy", plugin(clippy))]
 
 #[macro_use]
+extern crate failure;
+
+#[macro_use]
 extern crate log;
 extern crate pretty_env_logger;
 
@@ -15,12 +18,22 @@ extern crate select;
 extern crate serde_json;
 extern crate url;
 
-use clap::{App, Arg, ArgGroup};
-
 mod steam;
 mod utils;
 
+use clap::{App, Arg, ArgGroup};
+use failure::{Error, ResultExt};
+
 fn main() {
+    if let Err(ref e) = run() {
+        for cause in e.causes() {
+            error!("{}", cause);
+        }
+        ::std::process::exit(1);
+    }
+}
+
+fn run() -> Result<(), Error> {
     dotenv::dotenv().ok();
     pretty_env_logger::init();
 
@@ -56,11 +69,11 @@ fn main() {
 
     if let Some(games) = {
         if let Some(user) = args.value_of("user") {
-            let api = steam::Api::from_env().expect(
+            let api = steam::Api::from_env().context(
                 "No steam api key provided. Set one in the STEAM_API_KEY environment variable.",
-            );
+            )?;
             let steamid = api.resolve_vanity_url(user)
-                .expect(&format!("Couldn't find steamid for {}", user));
+                .context(format!("Couldn't find steamid for {}", user))?;
             info!("Resolved vanity name to: {}", steamid);
             match api.get_owned_games(steamid) {
                 Ok(games) => Some(games),
@@ -79,4 +92,6 @@ fn main() {
             }
         }
     }
+
+    Ok(())
 }

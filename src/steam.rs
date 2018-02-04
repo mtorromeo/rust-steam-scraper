@@ -2,51 +2,15 @@ use std::env;
 use std::collections::HashMap;
 use reqwest;
 use reqwest::header::{Cookie, Headers};
-use std::result;
 use std::str::FromStr;
-use std::error::Error;
-use std::num::ParseIntError;
 use serde_json::Value;
 use url::Url;
 use scraper::{Html, Selector};
 use std::path::{Path, PathBuf};
+use failure::Error;
 
 pub struct Api {
     key: String,
-}
-
-#[derive(Debug)]
-pub struct ApiError {
-    reason: String,
-}
-
-impl ApiError {
-    fn new<S: Into<String>>(reason: S) -> Self {
-        Self {
-            reason: reason.into(),
-        }
-    }
-}
-
-pub type Result<T> = result::Result<T, ApiError>;
-
-impl From<reqwest::Error> for ApiError {
-    fn from(error: reqwest::Error) -> Self {
-        error!("{:?}", error);
-        ApiError::new(error.description())
-    }
-}
-
-impl From<ParseIntError> for ApiError {
-    fn from(error: ParseIntError) -> Self {
-        ApiError::new(error.description())
-    }
-}
-
-impl From<String> for ApiError {
-    fn from(error: String) -> Self {
-        ApiError::new(error)
-    }
 }
 
 impl Api {
@@ -54,11 +18,15 @@ impl Api {
         Api { key: key.into() }
     }
 
-    pub fn from_env() -> result::Result<Api, env::VarError> {
+    pub fn from_env() -> Result<Api, Error> {
         Ok(Api::new(env::var("STEAM_API_KEY")?))
     }
 
-    fn call<S: AsRef<str>>(&self, path: S, options: &mut HashMap<String, String>) -> Result<Value> {
+    fn call<S: AsRef<str>>(
+        &self,
+        path: S,
+        options: &mut HashMap<String, String>,
+    ) -> Result<Value, Error> {
         let url = format!("https://api.steampowered.com/{}", path.as_ref());
         options.insert(String::from("key"), self.key.to_owned());
 
@@ -67,22 +35,22 @@ impl Api {
         if resp.status().is_success() {
             Ok(resp.json()?)
         } else {
-            Err(ApiError::new("Steam API returned an invalid response code"))
+            format_err!("Invalid response returned by the Steam API")
         }
     }
 
-    pub fn resolve_vanity_url<S: Into<String>>(&self, username: S) -> Result<String> {
+    pub fn resolve_vanity_url<S: Into<String>>(&self, username: S) -> Result<String, Error> {
         let mut options = HashMap::new();
         options.insert(String::from("vanityurl"), username.into());
         let response = self.call("ISteamUser/ResolveVanityURL/v0001/", &mut options)?;
         let response = response["response"]["steamid"].clone();
         match response {
             Value::String(steamid) => Ok(steamid),
-            _ => Err(ApiError::new("Steam API returned an invalid response")),
+            _ => bail!("Invalid response returned by the Steam API"),
         }
     }
 
-    pub fn get_owned_games<S: Into<String>>(&self, steamid: S) -> Result<Vec<u64>> {
+    pub fn get_owned_games<S: Into<String>>(&self, steamid: S) -> Result<Vec<u64>, Error> {
         let mut options = HashMap::new();
         options.insert(String::from("steamid"), steamid.into());
         options.insert(String::from("format"), String::from("json"));
@@ -99,24 +67,24 @@ impl Api {
                     .collect::<Vec<_>>();
                 Ok(games)
             }
-            _ => Err(ApiError::new("Steam API returned an invalid response")),
+            _ => bail!("Invalid response returned by the Steam API"),
         }
     }
 }
 
-pub fn appid_from_url(url: &Url) -> Result<u64> {
+pub fn appid_from_url(url: &Url) -> Result<u64, Error> {
     match url.path_segments() {
         Some(mut parts) => {
             match parts.next() {
                 Some("app") => (),
-                Some(_) | None => return Err(ApiError::new("Invalid Steam game URL")),
+                Some(_) | None => bail!("Invalid Steam game URL"),
             }
             match parts.next() {
                 Some(id) => Ok(u64::from_str(id)?),
-                None => Err(ApiError::new("Invalid Steam game URL")),
+                None => bail!("Invalid Steam game URL"),
             }
         }
-        None => Err(ApiError::new("Invalid Steam game URL")),
+        None => bail!("Invalid Steam game URL"),
     }
 }
 
@@ -129,15 +97,12 @@ pub struct Page {
 }
 
 impl Page {
-    pub fn scrape(appid: u64) -> Result<Self> {
-        let url = match Url::parse(&format!("http://store.steampowered.com/app/{}/", appid)) {
-            Ok(url) => url,
-            Err(e) => return Err(ApiError::new(e.description())),
-        };
+    pub fn scrape(appid: u64) -> Result<Self, Error> {
+        let url = Url::parse(&format!("http://store.steampowered.com/app/{}/", appid))?;
         Self::scrape_url(&url)
     }
 
-    pub fn scrape_url(url: &Url) -> Result<Self> {
+    pub fn scrape_url(url: &Url) -> Result<Self, Error> {
         let appid = appid_from_url(url)?;
         let cache_path = Path::new("cache").join(&format!("{}", appid));
         let body = Self::fetch(&url, &cache_path.join("index.html"))?;
@@ -154,7 +119,7 @@ impl Page {
         })
     }
 
-    fn fetch<S: AsRef<str>>(url: S, cache_path: &Path) -> Result<String> {
+    fn fetch<S: AsRef<str>>(url: S, cache_path: &Path) -> Result<String, Error> {
         if cache_path.to_str().unwrap_or("") != "" {
             if let Ok(body) = super::utils::file_get_string_contents(cache_path) {
                 debug!("Found page in cache");
@@ -174,9 +139,10 @@ impl Page {
         let http = reqwest::Client::new();
 
         let mut resp = http.get(url).headers(headers).send()?;
-        if !resp.status().is_success() {
-            return Err(ApiError::new("Failed to retrieve steam store page"));
-        }
+        ensure!(
+            resp.status().is_success(),
+            "Failed to retrieve steam store page"
+        );
         let body = resp.text()?;
 
         if cache_path.to_str().unwrap_or("") != "" {
