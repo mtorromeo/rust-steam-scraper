@@ -168,6 +168,7 @@ impl Page {
         let mut headers = Headers::new();
         let mut cookie = Cookie::new();
         cookie.append("birthtime", "400000000");
+        cookie.append("mature_content", "1");
         headers.set(cookie);
 
         let http = reqwest::Client::new();
